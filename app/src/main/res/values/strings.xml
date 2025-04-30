@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">Notes</string>
+    <string name="notes_list_title">My Notes</string>
+    <string name="search_hint">Search Notes</string>
+    <string name="search_icon_description">Search Icon</string>
+    <string name="close_note">Close note button</string>
+    <string name="delete_note">Delete note button</string>
+    <string name="add_new_task">Add new task button</string>
+    <string name="welcome_title">Welcome to Notes</string>
+    <string name="welcome_subtitle">Keep your thoughts and tasks in one place</string>
+    <string name="log_in_via_google">Log in via google</string>
+    <string name="server_client_id">571808288824-4ud09558gmon40glmk28t0hu09le1bdi.apps.googleusercontent.com</string>
+    <string name="sign_out_button">Sign out button</string>
+    <string name="add_note_button">Add note button</string>
+    <string name="note_content_placeholder">Write some notes…</string>
+    <string name="note_title_placeholder">Add title</string>
+    <string name="italic">Apply Italic style</string>
+    <string name="bold">Apply Bold font weight</string>
+    <string name="underline">Apply Underline decoration</string>
+</resources>
