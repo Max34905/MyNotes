@@ -1,0 +1,113 @@
+@startuml
+package "Model" {
+  class Note {
+    - id: String
+    - title: String
+    - content: String
+    - timestamp: Long
+    + Note(id: String, title: String, content: String, timestamp: Long)
+  }
+
+  class NoteEntity {
+    - id: String
+    - title: String
+    - content: String
+    - timestamp: Long
+    + toNote(): Note
+  }
+}
+
+package "Data Layer" {
+  interface NoteDao {
+    + getAllNotesFlow(): Flow<List<NoteEntity>>
+    + getAllNotesList(): List<NoteEntity>
+    + getNoteById(id: String): NoteEntity?
+    + upsertNote(note: NoteEntity)
+    + deleteNote(noteId: String)
+    + deleteAllNotes()
+  }
+
+  class NotesDatabase {
+    + noteDao(): NoteDao
+  }
+
+  class NotesRepository {
+    - noteDao: NoteDao
+    - firestore: FirebaseFirestore
+    - auth: FirebaseAuth
+    + getNotesFlow(): Flow<List<Note>>
+    + addNote(): String
+    + updateNote(note: Note)
+    + deleteNote(noteId: String)
+    + getNoteById(noteId: String): Note?
+    + setupRealtimeSync()
+    + cleanUp()
+  }
+}
+
+package "UI Layer" {
+  class MainActivity {
+    - signInViewModel: SignInScreenViewModel
+    - signInLauncher: ActivityResultLauncher
+    + onCreate()
+  }
+
+  class NavigationViewModel {
+    - navigationState: StateFlow<NavigationState>
+    + checkUserAuth()
+  }
+
+  class SignInScreenViewModel {
+    - googleSignInClient: GoogleSignInClient
+    + signIn()
+    + handleSignInResult()
+  }
+
+  class NotesListScreenViewModel {
+    - repository: NotesRepository
+    - notes: StateFlow<List<Note>>
+    + loadNotes()
+    + deleteNote(noteId: String)
+    + signOut()
+  }
+
+  class NoteScreenViewModel {
+    - repository: NotesRepository
+    - note: StateFlow<Note?>
+    + loadNote(noteId: String)
+    + updateNote(note: Note)
+    + deleteNote(noteId: String)
+  }
+}
+
+package "External Services" {
+  class FirebaseAuth
+  class FirebaseFirestore
+  class GoogleSignInClient
+}
+
+' Model relationships
+NoteEntity ||-- Note : converts to
+NoteDao --> NoteEntity : handles
+NotesRepository --> Note : works with
+
+' Data Layer relationships
+NotesDatabase ||-- NoteDao : provides
+NotesDatabase *-- NoteEntity : stores
+NotesRepository --> NoteDao : uses
+NotesRepository --> FirebaseFirestore : syncs with
+NotesRepository --> FirebaseAuth : authenticates
+
+' UI Layer to Data/Model relationships
+SignInScreenViewModel --> GoogleSignInClient : uses
+SignInScreenViewModel --> FirebaseAuth : authenticates
+NotesListScreenViewModel --> NotesRepository : manages data
+NotesListScreenViewModel --> Note : displays
+NoteScreenViewModel --> NotesRepository : manages data
+NoteScreenViewModel --> Note : edits
+NavigationViewModel --> FirebaseAuth : checks auth
+
+' Activity relationships
+MainActivity --> SignInScreenViewModel : contains
+MainActivity --> NavigationViewModel : uses
+@enduml

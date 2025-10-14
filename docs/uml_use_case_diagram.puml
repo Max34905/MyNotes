@@ -1,0 +1,12 @@
+@startuml
+actor User
+
+User -down-> (Sign In with Google)
+User -down-> (Sign Out)
+User -down-> (Create Note)
+User -down-> (View Notes List)
+User -up-> (Edit Note)
+User -up-> (Delete Note)
+User -up-> (Search Notes)
+
+@enduml

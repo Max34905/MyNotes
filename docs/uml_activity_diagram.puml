@@ -1,0 +1,85 @@
+@startuml
+title "MyNotes Application - Activity Diagram (All Execution Flows)"
+
+start
+:User opens app;
+:NavigationViewModel checks authentication;
+
+if (User authenticated?) then (yes)
+  :Show Notes List Screen;
+
+  while (User interacts with app) is (continue)
+    if (User action?) then (Add Note)
+      :Navigate to Note Screen;
+      :Show empty note form;
+      :User enters note details;
+      :Save note locally (Room);
+      :Sync note to Firebase;
+      :Return to Notes List;
+      :Update notes list;
+
+    elseif (Edit Note)
+      :User selects existing note;
+      :Navigate to Note Screen;
+      :Load note from local DB;
+      :Display note content;
+      :User edits note;
+      if (Save changes?) then (yes)
+        :Update note locally;
+        if (Network available?) then (yes)
+          :Sync to Firebase;
+        else (no)
+          :Queue for later sync;
+        endif
+        :Return to Notes List;
+      else (cancel)
+        :Discard changes;
+        :Return to Notes List;
+      endif
+
+    elseif (Delete Note)
+      :User selects delete;
+      :Show confirmation dialog;
+      if (Confirm deletion?) then (yes)
+        :Delete from local DB;
+        :Delete from Firebase;
+        :Update notes list;
+      else (cancel)
+        :Cancel deletion;
+      endif
+
+    elseif (Sign Out)
+      :Sign out from Firebase Auth;
+      :Clear local session;
+      :Navigate to Sign In Screen;
+
+    endif
+  endwhile (exit)
+
+else (no)
+  :Show Sign In Screen;
+  :User initiates Google Sign In;
+  :Launch Google Sign In intent;
+
+  if (Sign in successful?) then (yes)
+    :Store authentication state;
+    :Navigate to Notes List Screen;
+    :Setup real-time sync;
+  else (no)
+    :Show error message;
+    :Stay on Sign In Screen;
+  endif
+
+endif
+
+:App terminated;
+stop
+
+note right
+  Three main execution flows:
+  1. Authentication Flow
+  2. Notes List Management Flow
+  3. Individual Note CRUD Flow
+end note
+
+@enduml

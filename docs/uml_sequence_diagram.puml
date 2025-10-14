@@ -1,0 +1,79 @@
+@startuml
+title "MyNotes Application - Complete Sequence Flows"
+
+actor User
+participant "MainActivity" as Main
+participant "NavigationViewModel" as NavVM
+participant "SignInViewModel" as SignVM
+participant "NotesListViewModel" as ListVM
+participant "NoteViewModel" as NoteVM
+participant "NotesRepository" as Repo
+participant "NoteDao" as DAO
+participant "FirebaseAuth" as Auth
+participant "Firestore" as Firebase
+
+== Authentication Flow ==
+User -> Main: Launch App
+Main -> NavVM: checkUserAuth()
+NavVM -> Auth: getCurrentUser()
+Auth --> NavVM: null (not authenticated)
+NavVM --> Main: NavigationState.Ready(SignInScreen)
+Main --> User: Show SignIn Screen
+
+User -> SignVM: Click "Sign In with Google"
+SignVM -> Auth: signInWithCredential()
+Auth --> SignVM: Success
+SignVM -> NavVM: User authenticated
+NavVM --> Main: Navigate to NotesListScreen
+
+== Notes List Flow ==
+Main -> ListVM: Initialize
+ListVM -> Repo: getNotesFlow()
+Repo -> DAO: getAllNotesFlow()
+DAO --> Repo: Flow<List<NoteEntity>>
+Repo -> Firebase: setupRealtimeSync()
+Firebase --> Repo: Real-time updates
+Repo --> ListVM: Flow<List<Note>>
+ListVM --> User: Display notes list
+
+User -> ListVM: Click "Add Note"
+ListVM -> Repo: addNote()
+Repo -> DAO: upsertNote(newNote)
+DAO --> Repo: Success
+Repo -> Firebase: Add document
+Firebase --> Repo: Success
+Repo --> ListVM: Note added
+ListVM --> User: Navigate to NoteScreen
+
+== Note Details Flow ==
+User -> NoteVM: Open note for editing
+NoteVM -> Repo: getNoteById(noteId)
+Repo -> DAO: getNoteById(noteId)
+DAO --> Repo: NoteEntity
+Repo --> NoteVM: Note
+NoteVM --> User: Display note content
+
+User -> NoteVM: Edit note content
+User -> NoteVM: Save changes
+NoteVM -> Repo: updateNote(updatedNote)
+Repo -> DAO: upsertNote(updatedNote)
+DAO --> Repo: Success
+Repo -> Firebase: Update document
+Firebase --> Repo: Success
+Repo --> NoteVM: Note updated
+NoteVM --> User: Show success, navigate back
+
+== Offline Scenario ==
+User -> NoteVM: Edit note (offline)
+NoteVM -> Repo: updateNote(note)
+Repo -> DAO: upsertNote(note)
+DAO --> Repo: Success (local only)
+Repo -x Firebase: Network unavailable
+Repo --> NoteVM: Saved locally
+
+note over Firebase: When network restored
+Firebase -> Repo: Sync pending changes
+Repo -> Firebase: Update document
+Firebase --> Repo: Sync complete
+
+@enduml
