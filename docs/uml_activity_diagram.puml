@@ -75,11 +75,4 @@ endif
 :App terminated;
 stop
 
-note right
-  Three main execution flows:
-  1. Authentication Flow
-  2. Notes List Management Flow
-  3. Individual Note CRUD Flow
-end note
-
 @enduml

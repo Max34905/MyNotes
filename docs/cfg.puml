@@ -1,0 +1,75 @@
+@startuml
+title "MyNotes Application - Control Flow Graph"
+
+state "Start" as Start
+state "A" as InitialCheck
+state "B" as AuthDecision
+state "C" as ShowNotesList
+state "D" as InteractionLoop
+state "E" as ActionDispatch
+state "F" as AddNote
+state "G" as EditNote
+state "H" as SaveChangesDecision
+state "I" as UpdateNote
+state "J" as NetworkDecision
+state "K" as SyncFirebase
+state "L" as QueueSync
+state "M" as ReturnToList
+state "N" as DiscardChanges
+state "O" as DeleteNote
+state "P" as ConfirmDeleteDecision
+state "Q" as PerformDeletion
+state "R" as CancelDeletion
+state "S" as SignOut
+state "T" as ShowSignIn
+state "U" as SignInDecision
+state "V" as SignInSuccess
+state "W" as SignInFailure
+state "End" as End
+
+[*] --> Start
+Start --> InitialCheck : User opens app
+InitialCheck --> AuthDecision : Check authentication
+
+AuthDecision --> ShowNotesList : [Authenticated]
+AuthDecision --> ShowSignIn : [Not Authenticated]
+
+ShowNotesList --> InteractionLoop
+InteractionLoop --> ActionDispatch : [Continue]
+InteractionLoop --> End : [Exit]
+
+ActionDispatch --> AddNote : [Add Note]
+ActionDispatch --> EditNote : [Edit Note]
+ActionDispatch --> DeleteNote : [Delete Note]
+ActionDispatch --> SignOut : [Sign Out]
+
+AddNote --> InteractionLoop : Return to list
+
+EditNote --> SaveChangesDecision : User edits note
+SaveChangesDecision --> UpdateNote : [Save]
+SaveChangesDecision --> DiscardChanges : [Cancel]
+
+UpdateNote --> NetworkDecision : Update locally
+NetworkDecision --> SyncFirebase : [Network available]
+NetworkDecision --> QueueSync : [No network]
+SyncFirebase --> ReturnToList
+QueueSync --> ReturnToList
+ReturnToList --> InteractionLoop
+DiscardChanges --> InteractionLoop
+
+DeleteNote --> ConfirmDeleteDecision : Show confirmation
+ConfirmDeleteDecision --> PerformDeletion : [Confirm]
+ConfirmDeleteDecision --> CancelDeletion : [Cancel]
+PerformDeletion --> InteractionLoop
+CancelDeletion --> InteractionLoop
+
+SignOut --> ShowSignIn
+
+ShowSignIn --> SignInDecision : User initiates Google Sign In
+SignInDecision --> SignInSuccess : [Success]
+SignInDecision --> SignInFailure : [Failure]
+
+SignInSuccess --> ShowNotesList : Navigate to Notes List
+SignInFailure --> ShowSignIn : Stay on Sign In Screen
+
+@enduml
