@@ -1,75 +1,70 @@
 @startuml
-title "MyNotes Application - Control Flow Graph"
+title "MyNotes Application - Activity Diagram (All Execution Flows)"
 
-state "Start" as Start
-state "A" as InitialCheck
-state "B" as AuthDecision
-state "C" as ShowNotesList
-state "D" as InteractionLoop
-state "E" as ActionDispatch
-state "F" as AddNote
-state "G" as EditNote
-state "H" as SaveChangesDecision
-state "I" as UpdateNote
-state "J" as NetworkDecision
-state "K" as SyncFirebase
-state "L" as QueueSync
-state "M" as ReturnToList
-state "N" as DiscardChanges
-state "O" as DeleteNote
-state "P" as ConfirmDeleteDecision
-state "Q" as PerformDeletion
-state "R" as CancelDeletion
-state "S" as SignOut
-state "T" as ShowSignIn
-state "U" as SignInDecision
-state "V" as SignInSuccess
-state "W" as SignInFailure
-state "End" as End
+start
+:A;
+:B;
 
-[*] --> Start
-Start --> InitialCheck : User opens app
-InitialCheck --> AuthDecision : Check authentication
+if (X?) then (Y)
+  :C;
 
-AuthDecision --> ShowNotesList : [Authenticated]
-AuthDecision --> ShowSignIn : [Not Authenticated]
+  while (Z) is (FF)
+    if (GGG) then (D)
+      :E;
+      :F;
+      :G;
+      :H;
+      :I;
+      :J;
+      :K;
 
-ShowNotesList --> InteractionLoop
-InteractionLoop --> ActionDispatch : [Continue]
-InteractionLoop --> End : [Exit]
+    elseif (L)
+      :M;
+      :N;
+      :O;
+      :P;
+      :Q;
+      :T;
+      :R;
+      if (U?) then (V)
+      :W;
+      else (X)
+      :Y;
+      endif
+      :Z;
 
-ActionDispatch --> AddNote : [Add Note]
-ActionDispatch --> EditNote : [Edit Note]
-ActionDispatch --> DeleteNote : [Delete Note]
-ActionDispatch --> SignOut : [Sign Out]
+    elseif (DD)
+      :EE;
+      :II;
+      :JJ;
+      :KK;
 
-AddNote --> InteractionLoop : Return to list
+    elseif (NN)
+      :OO;
+      :PP;
+      :QQ;
 
-EditNote --> SaveChangesDecision : User edits note
-SaveChangesDecision --> UpdateNote : [Save]
-SaveChangesDecision --> DiscardChanges : [Cancel]
+    endif
+  endwhile (RR)
 
-UpdateNote --> NetworkDecision : Update locally
-NetworkDecision --> SyncFirebase : [Network available]
-NetworkDecision --> QueueSync : [No network]
-SyncFirebase --> ReturnToList
-QueueSync --> ReturnToList
-ReturnToList --> InteractionLoop
-DiscardChanges --> InteractionLoop
+else (SS)
+  :TT;
+  :UU;
+  :VV;
 
-DeleteNote --> ConfirmDeleteDecision : Show confirmation
-ConfirmDeleteDecision --> PerformDeletion : [Confirm]
-ConfirmDeleteDecision --> CancelDeletion : [Cancel]
-PerformDeletion --> InteractionLoop
-CancelDeletion --> InteractionLoop
+  if (WW?) then (XX)
+    :YY;
+    :ZZ;
+    :AAA;
+  else (BBB)
+    :CCC;
+    :DDD;
+  endif
 
-SignOut --> ShowSignIn
+endif
 
-ShowSignIn --> SignInDecision : User initiates Google Sign In
-SignInDecision --> SignInSuccess : [Success]
-SignInDecision --> SignInFailure : [Failure]
-
-SignInSuccess --> ShowNotesList : Navigate to Notes List
-SignInFailure --> ShowSignIn : Stay on Sign In Screen
+:EEE;
+stop
 
 @enduml
+

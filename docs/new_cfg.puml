@@ -3,66 +3,118 @@ title "MyNotes Application - Activity Diagram (All Execution Flows)"
 
 start
 :User opens app;
+note right: A
 :NavigationViewModel checks authentication;
+note right: B
 
 if (User authenticated?) then (yes)
+  note left: X -> Y
+  note right: X -> SS
   :Show Notes List Screen;
+  note right: C
 
   while (User interacts with app) is (continue)
+    note right: Z -> FF
+    note left: Z -> RR
     if (User action?) then (Add Note)
+      note right: GGG -> D
       :Navigate to Note Screen;
+      note right: E
       :Show empty note form;
+      note right: F
       :User enters note details;
+      note right: G
       :Save note locally (Room);
+      note right: H
       :Sync note to Firebase;
+      note right: I
       :Return to Notes List;
+      note right: J
       :Update notes list;
+      note right: K
 
     elseif (Edit Note)
+      note right: L
       :User selects existing note;
+      note right: M
       :Navigate to Note Screen;
+      note right: N
       :Load note from local DB;
+      note right: O
       :Display note content;
+      note right: P
       :User edits note;
+      note right: Q
       :Save changes locally;
-      if (Network available?) then (yes)
-      :Sync to Firebase;
-      else (no)
-      :Queue for later sync;
-      endif
+      note right: T
       :Return to Notes List;
+      note right: R
+      if (Network available?) then (yes)
+        note left: U -> V
+        note right: U -> X
+      :Sync to Firebase;
+      note right: W
+      else (no)
+        note right: X
+      :Queue for later sync;
+      note right: Y
+      endif
+      :Update notes list;
+      note right: Z
 
     elseif (Delete Note)
+      note right: DD
       :User selects delete;
+      note right: EE
       :Delete from local DB;
+      note right: II
       :Delete from Firebase;
+      note right: JJ
       :Update notes list;
+      note right: KK
 
     elseif (Sign Out)
+      note right: NN
       :Sign out from Firebase Auth;
+      note right: OO
       :Clear local session;
+      note right: PP
       :Navigate to Sign In Screen;
+      note right: QQ
 
     endif
   endwhile (exit)
+  note right: RR
 
 else (no)
+  note right: X -> SS
   :Show Sign In Screen;
+  note right: TT
   :User initiates Google Sign In;
+  note right: UU
   :Launch Google Sign In intent;
+  note right: VV
 
   if (Sign in successful?) then (yes)
+    note left: WW -> XX
+    note right: WW -> BBB
     :Store authentication state;
+    note right: YY
     :Navigate to Notes List Screen;
+    note right: ZZ
     :Setup real-time sync;
+    note right: AAA
   else (no)
+    note right: BBB
     :Show error message;
+    note right: CCC
     :Stay on Sign In Screen;
+    note right: DDD
   endif
 
 endif
 
 :App terminated;
+note right: EEE
 stop
-
 @enduml
