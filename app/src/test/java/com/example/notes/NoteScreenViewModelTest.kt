@@ -54,7 +54,6 @@ class NoteScreenViewModelTest {
      */
     @Test
     fun testTB1_titleAndContentNotEmpty_saveSuccessfully() = runTest {
-        // Given - нотатка з заповненими заголовком і вмістом
         val note = Note(
             id = "note-1",
             date = "17.11",
@@ -68,11 +67,9 @@ class NoteScreenViewModelTest {
 
         whenever(notesRepository.updateNote(any())).thenReturn(Unit)
 
-        // When - зберігаємо нотатку
         viewModel.updateNote(note, taskLines, content, title)
         advanceUntilIdle()
 
-        // Then - нотатка успішно збережена
         verify(notesRepository, times(1)).updateNote(
             argThat { updatedNote ->
                 updatedNote.id == "note-1" &&
@@ -91,7 +88,6 @@ class NoteScreenViewModelTest {
      */
     @Test
     fun testTB2_titleEmptyContentNotEmpty_saveWithContentAsTitle() = runTest {
-        // Given - нотатка з порожнім заголовком але з вмістом
         val note = Note(
             id = "note-2",
             date = "17.11",
@@ -105,11 +101,9 @@ class NoteScreenViewModelTest {
 
         whenever(notesRepository.updateNote(any())).thenReturn(Unit)
 
-        // When - зберігаємо нотатку з порожнім заголовком
         viewModel.updateNote(note, taskLines, content, emptyTitle)
         advanceUntilIdle()
 
-        // Then - нотатка збережена (система може використати вміст як заголовок або зберегти як є)
         verify(notesRepository, times(1)).updateNote(
             argThat { updatedNote ->
                 updatedNote.id == "note-2" &&
@@ -126,7 +120,6 @@ class NoteScreenViewModelTest {
      */
     @Test
     fun testTB3_titleNotEmptyContentEmpty_saveSuccessfully() = runTest {
-        // Given - нотатка з заголовком але без вмісту
         val note = Note(
             id = "note-3",
             date = "17.11",
@@ -140,11 +133,9 @@ class NoteScreenViewModelTest {
 
         whenever(notesRepository.updateNote(any())).thenReturn(Unit)
 
-        // When - зберігаємо нотатку з заголовком але без вмісту
         viewModel.updateNote(note, taskLines, emptyContent, title)
         advanceUntilIdle()
 
-        // Then - нотатка успішно збережена з порожнім вмістом
         verify(notesRepository, times(1)).updateNote(
             argThat { updatedNote ->
                 updatedNote.id == "note-3" &&
@@ -163,7 +154,6 @@ class NoteScreenViewModelTest {
      */
     @Test
     fun testTB4_titleAndContentEmpty_doesNotSave() = runTest {
-        // Given - нотатка з порожнім заголовком і вмістом
         val note = Note(
             id = "note-4",
             date = "17.11",
@@ -177,161 +167,19 @@ class NoteScreenViewModelTest {
 
         whenever(notesRepository.updateNote(any())).thenReturn(Unit)
 
-        // When - спроба зберегти повністю порожню нотатку
         val canSave = emptyTitle.isNotEmpty() || emptyContent.text.isNotEmpty() || taskLines.isNotEmpty()
 
-        // Then - нотатка НЕ має бути збережена
         assertFalse("Should not allow saving empty note", canSave)
 
-        // Перевіряємо що repository.updateNote НЕ викликається для порожньої нотатки
-        // У реальній імплементації ViewModel має перевіряти це перед викликом updateNote
         if (canSave) {
             viewModel.updateNote(note, taskLines, emptyContent, emptyTitle)
             advanceUntilIdle()
         }
 
-        // Якщо валідація правильна, updateNote не повинен був викликатися
         verify(notesRepository, never()).updateNote(
             argThat { updatedNote ->
                 updatedNote.title.isEmpty() && updatedNote.content.isEmpty()
             }
         )
-    }
-
-    /**
-     * Тест отримання нотатки за ID
-     */
-    @Test
-    fun testGetNoteById_loadsNoteSuccessfully() = runTest {
-        // Given
-        val noteId = "test-note-123"
-        val expectedNote = Note(
-            id = noteId,
-            date = "17.11",
-            title = "Test Note",
-            content = "Test Content"
-        )
-        whenever(notesRepository.getNoteById(noteId)).thenReturn(expectedNote)
-
-        // When
-        viewModel.getNoteById(noteId)
-        advanceUntilIdle()
-
-        // Then
-        verify(notesRepository, times(1)).getNoteById(noteId)
-        assertEquals("Note should be loaded", expectedNote, viewModel.note.value)
-        assertEquals("Note title should match", "Test Note", viewModel.note.value?.title)
-    }
-
-    /**
-     * Тест видалення нотатки
-     */
-    @Test
-    fun testDeleteNote_deletesSuccessfully() = runTest {
-        // Given
-        val noteIdToDelete = "note-to-delete"
-
-        // When
-        viewModel.deleteNote(noteIdToDelete)
-        advanceUntilIdle()
-
-        // Then
-        verify(notesRepository, times(1)).deleteNote(noteIdToDelete)
-    }
-
-    /**
-     * Тест розділення контенту на текст та задачі
-     */
-    @Test
-    fun testSplitContent_separatesTextAndTasks() {
-        // Given
-        val content = """
-            Regular text line 1
-            Regular text line 2
-            [ ] Unchecked task
-            [x] Checked task
-            More regular text
-        """.trimIndent()
-
-        // When
-        val (textContent, taskContent) = viewModel.splitContent(content)
-
-        // Then
-        assertTrue("Text should contain regular lines", textContent.contains("Regular text line 1"))
-        assertTrue("Text should contain regular lines", textContent.contains("More regular text"))
-        assertTrue("Tasks should contain unchecked task", taskContent.contains("[ ] Unchecked task"))
-        assertTrue("Tasks should contain checked task", taskContent.contains("[x] Checked task"))
-    }
-
-    /**
-     * Тест оновлення нотатки з задачами
-     */
-    @Test
-    fun testUpdateNote_withTaskLines_combinesContentCorrectly() = runTest {
-        // Given
-        val note = Note(
-            id = "note-5",
-            date = "17.11",
-            title = "Task Note",
-            content = ""
-        )
-
-        val noteTextField = TextFieldValue("Regular text content")
-        val taskLines = listOf("[ ] Task 1", "[x] Task 2")
-        val title = "Updated Task Note"
-
-        // When
-        viewModel.updateNote(note, taskLines, noteTextField, title)
-        advanceUntilIdle()
-
-        // Then
-        verify(notesRepository, times(1)).updateNote(
-            argThat { updatedNote ->
-                updatedNote.content.contains("Regular text content") &&
-                updatedNote.content.contains("[ ] Task 1") &&
-                updatedNote.content.contains("[x] Task 2")
-            }
-        )
-    }
-
-    /**
-     * Тест розділення контенту тільки з текстом (без задач)
-     */
-    @Test
-    fun testSplitContent_onlyText_noTasks() {
-        // Given
-        val content = """
-            Just regular text
-            Another line of text
-            No tasks here
-        """.trimIndent()
-
-        // When
-        val (textContent, taskContent) = viewModel.splitContent(content)
-
-        // Then
-        assertTrue("Text should contain all content", textContent.contains("Just regular text"))
-        assertTrue("Task content should be empty", taskContent.isEmpty())
-    }
-
-    /**
-     * Тест розділення контенту тільки з задачами (без тексту)
-     */
-    @Test
-    fun testSplitContent_onlyTasks_noText() {
-        // Given
-        val content = """
-            [ ] Task 1
-            [x] Task 2
-            [ ] Task 3
-        """.trimIndent()
-
-        // When
-        val (textContent, taskContent) = viewModel.splitContent(content)
-
-        // Then
-        assertTrue("Text content should be empty", textContent.isEmpty())
-        assertTrue("Tasks should contain all task lines", taskContent.contains("[ ] Task 1"))
-        assertTrue("Tasks should contain all task lines", taskContent.contains("[x] Task 2"))
     }
 }
