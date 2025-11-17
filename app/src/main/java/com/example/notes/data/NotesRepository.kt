@@ -21,7 +21,7 @@ import java.util.Calendar
 import java.util.Date
 import javax.inject.Inject
 
-class NotesRepository @Inject constructor(
+open class NotesRepository @Inject constructor(
     private val noteDao: NoteDao
 ) {
     val database: FirebaseDatabase = Firebase.database("https://notes-fd75d-default-rtdb.europe-west1.firebasedatabase.app/")
@@ -42,7 +42,7 @@ class NotesRepository @Inject constructor(
     }
     private fun getNotesRef() = database.getReference("notes").child(getUserId())
 
-    fun setupRealtimeSync() {
+    open fun setupRealtimeSync() {
         val notesRef = getNotesRef()
         listener?.let { notesRef.removeEventListener(it) }
         Log.d("NotesRepository", "Setting up realtime sync for $notesRef")
@@ -99,7 +99,7 @@ class NotesRepository @Inject constructor(
         }
     }
 
-    suspend fun addNote(): String {
+    open suspend fun addNote(): String {
         return try {
             val notesRef = getNotesRef()
             val key = notesRef.push().key ?: return ""
@@ -126,7 +126,7 @@ class NotesRepository @Inject constructor(
         }
     }
 
-    suspend fun updateNote(note: Note) {
+    open suspend fun updateNote(note: Note) {
         try {
             val notesRef = getNotesRef()
             Log.d("Firebase", "Updating note: ${note.id}")
@@ -145,7 +145,7 @@ class NotesRepository @Inject constructor(
         }
     }
 
-    suspend fun deleteNote(noteId: String) {
+    open suspend fun deleteNote(noteId: String) {
         try {
             val notesRef = getNotesRef()
             notesRef.child(noteId).removeValue().await()

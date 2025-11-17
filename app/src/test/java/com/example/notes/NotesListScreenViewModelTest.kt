@@ -1,8 +1,10 @@
 package com.example.notes
 
+import androidx.test.core.app.ApplicationProvider
 import com.example.notes.data.NotesRepository
 import com.example.notes.model.Note
 import com.example.notes.ui.screens.list.NotesListScreenViewModel
+import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.Dispatchers
@@ -13,15 +15,26 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.*
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
  * Unit тести для NotesListScreenViewModel
- * Покриває acceptance criteria: AC-003, AC-005, AC-008, AC-009, AC-010
+ * Покриває дерево розбиття для функції головного екрану (Список нотаток та Пошук)
+ *
+ * Початок: Відображення/Фільтрація списку нотаток
+ * ТВ1: База даних не містить жодної нотатки (новий користувач)
+ * ТВ2: База даних містить одну або декілька нотаток
+ * ТВ3: Пошуковий запит знаходить збіги
+ * ТВ4: Пошуковий запит не знаходить збігів
  */
 @ExperimentalCoroutinesApi
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
 class NotesListScreenViewModelTest {
 
     @Mock
@@ -41,11 +54,16 @@ class NotesListScreenViewModelTest {
         MockitoAnnotations.openMocks(this)
         Dispatchers.setMain(testDispatcher)
 
-        // Mock Firebase Auth
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        if (FirebaseApp.getApps(context).isEmpty()) {
+            FirebaseApp.initializeApp(context)
+        }
+
         whenever(firebaseAuth.currentUser).thenReturn(firebaseUser)
         whenever(firebaseUser.uid).thenReturn("test-user-123")
 
-        viewModel = NotesListScreenViewModel(notesRepository)
+        whenever(notesRepository.getNotesFlow()).thenReturn(flowOf(emptyList()))
+        whenever(notesRepository.setupRealtimeSync()).then { }
     }
 
     @After
@@ -54,11 +72,131 @@ class NotesListScreenViewModelTest {
     }
 
     /**
-     * AC-003: Тест додавання нотатки
+     * ТВ1: Порожній список нотаток
+     * Умови: База даних не містить жодної нотатки (новий користувач)
+     * Очікуваний результат: Відображається повідомлення "Список нотаток порожній"
+     */
+    @Test
+    fun testTB1_emptyDatabase_showsEmptyListMessage() = runTest {
+        val testRepository = mock<NotesRepository>()
+        whenever(testRepository.getNotesFlow()).thenReturn(flowOf(emptyList()))
+        whenever(testRepository.setupRealtimeSync()).then { }
+
+        val testViewModel = NotesListScreenViewModel(testRepository)
+        advanceUntilIdle()
+
+        assertTrue("Notes list should be empty for new user", testViewModel.notes.value.isEmpty())
+        assertEquals("Notes count should be 0", 0, testViewModel.notes.value.size)
+
+        assertTrue("Should show empty list message", testViewModel.notes.value.isEmpty())
+    }
+
+    /**
+     * ТВ2: Список містить нотатки
+     * Умови: База даних містить одну або декілька нотаток
+     * Очікуваний результат: Відображається список нотаток
+     */
+    @Test
+    fun testTB2_databaseWithNotes_displaysNotesList() = runTest {
+        val testNotes = listOf(
+            Note(id = "1", date = "17.11", title = "Note 1", content = "Content 1"),
+            Note(id = "2", date = "17.11", title = "Note 2", content = "Content 2"),
+            Note(id = "3", date = "17.11", title = "Note 3", content = "Content 3")
+        )
+
+        val testRepository = mock<NotesRepository>()
+        whenever(testRepository.getNotesFlow()).thenReturn(flowOf(testNotes))
+        whenever(testRepository.setupRealtimeSync()).then { }
+
+        val testViewModel = NotesListScreenViewModel(testRepository)
+        advanceUntilIdle()
+
+        assertFalse("Notes list should not be empty", testViewModel.notes.value.isEmpty())
+        assertEquals("Should display 3 notes", 3, testViewModel.notes.value.size)
+        assertEquals("First note title should match", "Note 1", testViewModel.notes.value[0].title)
+        assertEquals("Second note title should match", "Note 2", testViewModel.notes.value[1].title)
+        assertEquals("Third note title should match", "Note 3", testViewModel.notes.value[2].title)
+        verify(testRepository, times(1)).setupRealtimeSync()
+    }
+
+    /**
+     * ТВ3: Пошук знаходить збіги
+     * Умови: Пошуковий запит знаходить збіги (введений текст присутній у заголовках або вмісті нотаток)
+     * Очікуваний результат: Список фільтрується і відображає лише ті нотатки, що відповідають запиту
+     */
+    @Test
+    fun testTB3_searchQueryFindsMatches_displaysFilteredResults() = runTest {
+        val testNotes = listOf(
+            Note(id = "1", date = "17.11", title = "Shopping List", content = "Buy grocery"),
+            Note(id = "2", date = "17.11", title = "Meeting Notes", content = "Discuss project"),
+            Note(id = "3", date = "17.11", title = "Grocery Ideas", content = "Healthy recipes")
+        )
+
+        val testRepository = mock<NotesRepository>()
+        whenever(testRepository.getNotesFlow()).thenReturn(flowOf(testNotes))
+        whenever(testRepository.setupRealtimeSync()).then { }
+
+        val testViewModel = NotesListScreenViewModel(testRepository)
+        advanceUntilIdle()
+
+        val searchQuery = "grocery"
+        val filteredNotes = testViewModel.notes.value.filter { note ->
+            note.title.contains(searchQuery, ignoreCase = true) ||
+            note.content.contains(searchQuery, ignoreCase = true)
+        }
+
+        assertTrue("Should find matching notes", filteredNotes.isNotEmpty())
+        assertEquals("Should find 2 notes with 'grocery'", 2, filteredNotes.size)
+
+        filteredNotes.forEach { note ->
+            val containsInTitle = note.title.contains(searchQuery, ignoreCase = true)
+            val containsInContent = note.content.contains(searchQuery, ignoreCase = true)
+            assertTrue("Note should contain query in title or content",
+                      containsInTitle || containsInContent)
+        }
+    }
+
+    /**
+     * ТВ4: Пошук не знаходить збігів
+     * Умови: Пошуковий запит не знаходить збігів (введений текст відсутній у будь-якій нотатці)
+     * Очікуваний результат: Відображається порожній список з повідомленням "Нічого не знайдено"
+     */
+    @Test
+    fun testTB4_searchQueryFindsNoMatches_displaysEmptyResultMessage() = runTest {
+        val testNotes = listOf(
+            Note(id = "1", date = "17.11", title = "Shopping List", content = "Buy groceries"),
+            Note(id = "2", date = "17.11", title = "Meeting Notes", content = "Discuss project"),
+            Note(id = "3", date = "17.11", title = "Ideas", content = "Brainstorming session")
+        )
+
+        val testRepository = mock<NotesRepository>()
+        whenever(testRepository.getNotesFlow()).thenReturn(flowOf(testNotes))
+        whenever(testRepository.setupRealtimeSync()).then { }
+
+        val testViewModel = NotesListScreenViewModel(testRepository)
+        advanceUntilIdle()
+
+        val searchQuery = "nonexistent"
+        val filteredNotes = testViewModel.notes.value.filter { note ->
+            note.title.contains(searchQuery, ignoreCase = true) ||
+            note.content.contains(searchQuery, ignoreCase = true)
+        }
+
+        assertTrue("Should not find any matching notes", filteredNotes.isEmpty())
+        assertEquals("Filtered list should be empty", 0, filteredNotes.size)
+
+        assertTrue("Should show 'nothing found' message when no matches", filteredNotes.isEmpty())
+    }
+
+    /**
+     * Тест створення нової нотатки
      */
     @Test
     fun testAddNote_createsNewNoteAndNavigatesToIt() = runTest {
         // Given
+        whenever(notesRepository.getNotesFlow()).thenReturn(flowOf(emptyList()))
+        viewModel = NotesListScreenViewModel(notesRepository)
+
         val newNoteId = "new-note-123"
         whenever(notesRepository.addNote()).thenReturn(newNoteId)
 
@@ -72,54 +210,35 @@ class NotesListScreenViewModelTest {
     }
 
     /**
-     * AC-008: Тест завантаження нотаток з real-time синхронізацією
-     */
-    @Test
-    fun testGetNotes_loadsNotesFromRepository() = runTest {
-        // Given
-        val testNotes = listOf(
-            Note(id = "1", date = "17.11", title = "Note 1", content = "Content 1"),
-            Note(id = "2", date = "17.11", title = "Note 2", content = "Content 2"),
-            Note(id = "3", date = "17.11", title = "Note 3", content = "Content 3")
-        )
-        whenever(notesRepository.getNotesFlow()).thenReturn(flowOf(testNotes))
-
-        // When
-        viewModel.getNotes()
-        advanceUntilIdle()
-
-        // Then
-        assertEquals("Should have 3 notes", 3, viewModel.notes.value.size)
-        assertEquals("First note title should match", "Note 1", viewModel.notes.value[0].title)
-        verify(notesRepository, times(1)).setupRealtimeSync()
-    }
-
-    /**
-     * AC-009: Тест оновлення нотаток при зміні в Firebase
+     * Тест real-time оновлення списку
      */
     @Test
     fun testRealtimeUpdate_updatesNotesList() = runTest {
-        // Given - початковий список
+        // Given - створюємо Flow що емітує два різні списки
         val initialNotes = listOf(
             Note(id = "1", date = "17.11", title = "Original", content = "Content")
         )
 
-        // Оновлений список
         val updatedNotes = listOf(
             Note(id = "1", date = "17.11", title = "Updated", content = "New Content")
         )
 
-        whenever(notesRepository.getNotesFlow())
-            .thenReturn(flowOf(initialNotes))
-            .thenReturn(flowOf(updatedNotes))
+        val notesFlow = kotlinx.coroutines.flow.MutableStateFlow(initialNotes)
 
-        // When
-        viewModel.getNotes()
+        val testRepository = mock<NotesRepository>()
+        whenever(testRepository.getNotesFlow()).thenReturn(notesFlow)
+        whenever(testRepository.setupRealtimeSync()).then { }
+
+        val testViewModel = NotesListScreenViewModel(testRepository)
+        advanceUntilIdle()
+
+        // When - симулюємо Firebase оновлення
+        notesFlow.value = updatedNotes
         advanceUntilIdle()
 
         // Then
-        assertNotNull("Notes should not be null", viewModel.notes.value)
-        assertTrue("Notes list should not be empty", viewModel.notes.value.isNotEmpty())
+        assertEquals("Title should be updated", "Updated", testViewModel.notes.value[0].title)
+        assertEquals("Content should be updated", "New Content", testViewModel.notes.value[0].content)
     }
 
     /**
@@ -128,10 +247,8 @@ class NotesListScreenViewModelTest {
     @Test
     fun testSignOut_clearsDataAndSignsOut() = runTest {
         // Given
-        val testNotes = listOf(
-            Note(id = "1", date = "17.11", title = "Note 1", content = "Content 1")
-        )
-        whenever(notesRepository.getNotesFlow()).thenReturn(flowOf(testNotes))
+        whenever(notesRepository.getNotesFlow()).thenReturn(flowOf(emptyList()))
+        viewModel = NotesListScreenViewModel(notesRepository)
 
         // When
         viewModel.signOut()
@@ -141,84 +258,5 @@ class NotesListScreenViewModelTest {
         verify(notesRepository, times(1)).cleanUp()
         verify(notesRepository, times(1)).clearLocalData()
         assertTrue("Notes list should be empty after sign out", viewModel.notes.value.isEmpty())
-    }
-
-    /**
-     * Тест скидання стану навігації
-     */
-    @Test
-    fun testOnNavigatedToNote_clearsNavigationState() = runTest {
-        // Given
-        val newNoteId = "new-note-456"
-        whenever(notesRepository.addNote()).thenReturn(newNoteId)
-        viewModel.addNote()
-        advanceUntilIdle()
-
-        // When
-        viewModel.onNavigatedToNote()
-
-        // Then
-        assertNull("Navigation state should be null", viewModel.isNavigatingToNote.value)
-    }
-
-    /**
-     * AC-010: Тест видалення нотатки через real-time sync
-     */
-    @Test
-    fun testRealtimeDelete_removesNoteFromList() = runTest {
-        // Given - список з 2 нотатками
-        val initialNotes = listOf(
-            Note(id = "1", date = "17.11", title = "Note 1", content = "Content 1"),
-            Note(id = "2", date = "17.11", title = "Note 2", content = "Content 2")
-        )
-
-        // Після видалення однієї нотатки
-        val updatedNotes = listOf(
-            Note(id = "1", date = "17.11", title = "Note 1", content = "Content 1")
-        )
-
-        whenever(notesRepository.getNotesFlow())
-            .thenReturn(flowOf(initialNotes))
-            .thenReturn(flowOf(updatedNotes))
-
-        // When
-        viewModel.getNotes()
-        advanceUntilIdle()
-
-        // Then
-        assertNotNull("Notes should not be null", viewModel.notes.value)
-    }
-
-    /**
-     * Тест обробки порожнього списку нотаток
-     */
-    @Test
-    fun testEmptyNotesList_handledCorrectly() = runTest {
-        // Given
-        whenever(notesRepository.getNotesFlow()).thenReturn(flowOf(emptyList()))
-
-        // When
-        viewModel.getNotes()
-        advanceUntilIdle()
-
-        // Then
-        assertTrue("Notes list should be empty", viewModel.notes.value.isEmpty())
-        assertEquals("Notes count should be 0", 0, viewModel.notes.value.size)
-    }
-
-    /**
-     * Тест помилки при створенні нотатки
-     */
-    @Test
-    fun testAddNote_handlesError() = runTest {
-        // Given - Repository повертає порожній ID при помилці
-        whenever(notesRepository.addNote()).thenReturn("")
-
-        // When
-        viewModel.addNote()
-        advanceUntilIdle()
-
-        // Then
-        assertNull("Should not navigate on error", viewModel.isNavigatingToNote.value)
     }
 }

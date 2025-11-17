@@ -1,5 +1,5 @@
 [versions]
-agp = "8.13.0"
+agp = "8.13.1"
 coreTesting = "2.2.0"
 credentials = "1.5.0"
 firebaseBom = "34.2.0"
@@ -22,9 +22,11 @@ mockitoInline = "5.2.0"
 mockitoKotlin = "6.1.0"
 navigationCompose = "2.9.4"
 playServicesAuth = "21.4.0"
+robolectric = "4.14.1"
 roomRuntime = "2.8.0"
 ksp = "2.2.20-2.0.3"
 googleServices = "4.4.3"
+testCore = "1.6.1"
 turbine = "1.2.1"
 
 [libraries]
@@ -63,6 +65,8 @@ mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockitoCore
 mockito-inline = { module = "org.mockito:mockito-inline", version.ref = "mockitoInline" }
 mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockitoKotlin" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+test-core = { module = "androidx.test:core", version.ref = "testCore" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 
 [plugins]
